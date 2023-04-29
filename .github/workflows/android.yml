@@ -29,7 +29,7 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          lime setup android
+          haxelib run lime setup android
           echo $ANDROID_SDK_ROOT
           echo $ANDROID_NDK_HOME
           echo $JAVA_HOME
