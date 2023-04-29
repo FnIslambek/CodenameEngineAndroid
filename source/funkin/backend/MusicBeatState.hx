@@ -142,6 +142,7 @@ class MusicBeatState extends FlxState implements IBeatReceiver
 		{
 			subState.tryUpdate(elapsed);
 		}
+		FlxG.plugins.get(funkin.backend.system.AndroidInput).updateInput(elapsed);
 	}
 	override function create()
 	{
@@ -181,7 +182,6 @@ class MusicBeatState extends FlxState implements IBeatReceiver
 				Logs.trace('State script successfully reloaded', WARNING, GREEN);
 		}
 		call("update", [elapsed]);
-
 		super.update(elapsed);
 	}
 

@@ -13,6 +13,7 @@ import flixel.FlxGame;
 import flixel.FlxState;
 import openfl.Assets;
 import flash.Lib;
+import funkin.backend.system.AndroidInput;
 import openfl.display.FPS;
 import openfl.display.Sprite;
 import openfl.events.Event;
@@ -41,9 +42,7 @@ class Main extends Sprite
 	public static var forceGPUOnlyBitmapsOff:Bool = false;
 
 	public static var scaleMode:FunkinRatioScaleMode;
-	#if !mobile
 	public static var framerateSprite:funkin.backend.system.framerate.Framerate;
-	#end
 
 	var gameWidth:Int = 1280; // Width of the game in pixels (might be less / more in actual pixels depending on your zoom).
 	var gameHeight:Int = 720; // Height of the game in pixels (might be less / more in actual pixels depending on your zoom).
@@ -67,13 +66,11 @@ class Main extends Sprite
 		super();
 		#if windows NativeAPI.setDarkMode(true); #end
 
-		addChild(game = new FunkinGame(gameWidth, gameHeight, MainState, framerate, framerate, skipSplash, startFullscreen));
+		addChild(game = new FunkinGame(#if android Math.floor(1280 + (1280 / ((lime.system.System.getDisplay(0).currentMode.width / lime.system.System.getDisplay(0).currentMode.height) + (1280 / 720)))) #else gameWidth #end, gameHeight, MainState, framerate, framerate, skipSplash, startFullscreen));
 
-		#if !mobile
 		addChild(framerateSprite = new funkin.backend.system.framerate.Framerate());
-		framerateSprite.scaleX = framerateSprite.scaleY = stage.window.scale;
+		framerateSprite.scaleX = framerateSprite.scaleY = stage.window.scale * 2;
 		SystemInfo.init();
-		#end
 	}
 
 	@:dox(hide)
@@ -146,6 +143,7 @@ class Main extends Sprite
 			#if USE_ADAPTED_ASSETS
 			Paths.assetsTree.__defaultLibraries.push(ModsFolder.loadLibraryFromFolder('assets', './assets/', true));
 			#end
+			trace("using this cuz y not");
 		}
 		#end
 
@@ -160,7 +158,7 @@ class Main extends Sprite
 		Options.load();
 
 		FlxG.fixedTimestep = false;
-
+        FlxG.plugins.add(new funkin.backend.system.AndroidInput());
 		FlxG.scaleMode = scaleMode = new FunkinRatioScaleMode();
 
 		Conductor.init();

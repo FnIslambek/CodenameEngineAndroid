@@ -1,5 +1,7 @@
 package funkin.backend.assets;
-
+#if android
+import android.content.Context;
+#end
 import funkin.backend.system.MainState;
 import funkin.menus.TitleState;
 import funkin.backend.system.Main;
@@ -35,11 +37,11 @@ class ModsFolder {
 	/**
 	 * Path to the `mods` folder.
 	 */
-	public static var modsPath:String = "./mods/";
+	public static var modsPath:String = #if android Context.getExternalFilesDir(null) + "/mods/"; #else "./mods/"; #end
 	/**
 	 * Path to the `addons` folder.
 	 */
-	public static var addonsPath:String = "./addons/";
+	public static var addonsPath:String = #if android Context.getExternalFilesDir(null) + "/addons/"; #else "./addons/"; #end
 
 	/**
 	 * Whenever its the first time mods has been reloaded.
@@ -49,7 +51,39 @@ class ModsFolder {
 	 * Initialises `mods` folder by adding callbacks and such.
 	 */
 	public static function init() {
+		#if MOD_SUPPORT if (!FileSystem.exists(modsPath)) FileSystem.createDirectory(modsPath);
+		if (!FileSystem.exists(addonsPath)){
+		    FileSystem.createDirectory(addonsPath);
+		    FileSystem.createDirectory(addonsPath + "android controls/");
+		    FileSystem.createDirectory(addonsPath + "android controls/data/");
+		    FileSystem.createDirectory(addonsPath + "android controls/data/charts/");
+		    sys.io.File.saveContent(addonsPath + "android controls/data/charts/4screenboxes.hx",
+			"import flixel.ui.FlxSpriteButton;
+            import openfl.geom.Rectangle;
 
+            function create() {
+            	var width = FlxG.width / 4;
+            	for (i in 0...4) {
+            		var button = new FlxSpriteButton(width * i).makeGraphic(width, FlxG.height, [0xFFc24b99, 0xFF00ffff, 0xFF12fa05, 0xFFf9393f][i]);
+            		button.width = width;
+            		button.height = FlxG.height;
+            		button.pixels.fillRect(new Rectangle(10, 10, width - 20, FlxG.height - 20), 0x00000000);
+            		add(button);
+            		button.cameras = [camHUD];
+            		button.alpha = 0.5;
+            		var k = FlxG.keys.getKey([37, 40, 38, 39][i]);
+            		button.onDown.callback = function() {
+            			k.press();
+            			button.alpha = 1;
+            		}
+            		button.onUp.callback = function() {
+            			k.release();
+            			button.alpha = 0.5;
+            		}
+            	}
+            }");
+		}
+		#end
 	}
 
 	/**

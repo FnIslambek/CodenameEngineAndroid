@@ -28,6 +28,9 @@ class CustomShader extends FunkinShader {
 		if (fragCode == null && vertCode == null)
 			Logs.trace('Shader "$name" couldn\'t be found.', ERROR);
 
+		#if mobile
+		if (glslVersion == "120") glslVersion = "100";
+		#end
 		super(fragCode, vertCode, glslVersion);
 	}
 }

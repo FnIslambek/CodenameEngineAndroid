@@ -44,6 +44,9 @@ class TitleState extends MusicBeatState
 
 	override public function create():Void
 	{
+	    #if android
+        FlxG.android.preventDefaultKeys = [BACK];
+        #end
 		curWacky = FlxG.random.getObject(getIntroTextShit());
 
 		MusicBeatState.skipTransIn = true;
@@ -132,17 +135,7 @@ class TitleState extends MusicBeatState
 	{
 		if (FlxG.keys.justPressed.F)  FlxG.fullscreen = !FlxG.fullscreen;
 
-		var pressedEnter:Bool = FlxG.keys.justPressed.ENTER;
-
-		#if mobile
-		for (touch in FlxG.touches.list)
-		{
-			if (touch.justPressed)
-			{
-				pressedEnter = true;
-			}
-		}
-		#end
+		var pressedEnter:Bool = controls.ACCEPT;
 
 		var gamepad:FlxGamepad = FlxG.gamepads.lastActive;
 

@@ -52,8 +52,5 @@ class MainState extends FlxState {
 			betaWarningShown = true;
 		}
 
-		#if sys
-		sys.FileSystem.createDirectory('./.temp/');
-		#end
 	}
 }

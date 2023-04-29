@@ -48,7 +48,7 @@ class Framerate extends Sprite {
 		instance = this;
 		textFormat = new TextFormat("Consolas", 12, -1);
 
-		x = 10;
+		x = 500;
 		y = 2;
 
 		FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, function(e:KeyboardEvent) {

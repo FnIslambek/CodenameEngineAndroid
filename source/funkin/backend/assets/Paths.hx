@@ -13,6 +13,10 @@ import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.system.FlxAssets.FlxGraphicAsset;
 import flixel.graphics.FlxGraphic;
 
+#if sys
+import sys.FileSystem;
+#end
+
 using StringTools;
 
 class Paths
@@ -243,57 +247,5 @@ class Paths
 				content[k] = '$key$e';
 		}
 		return content;
-		/*
-		if (!key.endsWith("/")) key = key + "/";
-
-		if (ModsFolder.currentModFolder == null && !scanSource)
-			return getFolderContent(key, false, addPath, true);
-
-		var folderPath:String = scanSource ? getAssetsPath(key) : getLibraryPathForce(key, 'mods/${ModsFolder.currentModFolder}');
-		var libThing = new LimeLibrarySymbol(folderPath);
-		var library = libThing.library;
-
-		if (library is openfl.utils.AssetLibrary) {
-			var lib = cast(libThing.library, openfl.utils.AssetLibrary);
-			@:privateAccess
-			if (lib.__proxy != null) library = lib.__proxy;
-		}
-
-		var content:Array<String> = [];
-		#if MOD_SUPPORT
-		if (library is funkin.backend.assets.ModsAssetLibrary) {
-			// easy task, can immediately scan for files!
-			var lib = cast(library, funkin.backend.assets.ModsAssetLibrary);
-			content = lib.getFiles(libThing.symbolName);
-			if (addPath)
-				for(i in 0...content.length)
-					content[i] = '$folderPath${content[i]}';
-		} else #end {
-			@:privateAccess
-			for(k=>e in library.paths) {
-				if (k.toLowerCase().startsWith(libThing.symbolName.toLowerCase())) {
-					if (addPath) {
-						if (libThing.libraryName != "")
-							content.push('${libThing.libraryName}:$k');
-						else
-							content.push(k);
-					} else {
-						var barebonesFileName = k.substr(libThing.symbolName.length);
-						if (!barebonesFileName.contains("/"))
-							content.push(barebonesFileName);
-					}
-				}
-			}
-		}
-
-		if (includeSource) {
-			var sourceResult = getFolderContent(key, false, addPath, true);
-			for(e in sourceResult)
-				if (!content.contains(e))
-					content.push(e);
-		}
-
-		return content;
-		*/
 	}
 }

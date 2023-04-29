@@ -9,6 +9,8 @@ import flixel.input.actions.FlxActionSet;
 import flixel.input.gamepad.FlxGamepadButton;
 import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.input.keyboard.FlxKey;
+import flixel.input.touch.FlxTouch;
+import flixel.math.FlxPoint;
 
 enum abstract Action(String) to String from String {
 	var UP = "up";
@@ -329,7 +331,6 @@ class Controls extends FlxActionSet
 	{
 		super.update();
 	}
-
 	// inline
 	public function checkByName(name:Action):Bool
 	{

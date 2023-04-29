@@ -82,6 +82,7 @@ class MainMenuState extends MusicBeatState
 		add(versionShit);
 
 		changeItem();
+		trace(funkin.backend.assets.ModsFolder.modsPath);
 	}
 
 	var selectedSomethin:Bool = false;
@@ -178,7 +179,12 @@ class MainMenuState extends MusicBeatState
 					FlxG.switchState(new CreditsMain());
 					trace("Credits Menu Selected");
 					*/
-
+				#if (MOD_SUPPORT && android)
+                case 'mods':
+                    openSubState(new ModSwitchMenu());
+                    persistentUpdate = false;
+                    persistentDraw = true;
+                #end
 				case 'options':
 					FlxG.switchState(new OptionsMenu());
 			}
