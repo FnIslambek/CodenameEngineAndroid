@@ -6,7 +6,7 @@ jobs:
   build:
     name: android Build
     permissions: write-all
-    runs-on: android-latest
+    runs-on: windows-latest
     steps:
       - name: Pulling the new commit
         uses: actions/checkout@v2
