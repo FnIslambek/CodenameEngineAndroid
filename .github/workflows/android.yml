@@ -30,9 +30,12 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           lime setup android
+        run: | 
           $ANDROID_SDK_ROOT
+        run: |
           $ANDROID_NDK_HOME
-          $JAVA_HOME_11_x86
+        run: |
+          $JAVA_HOME
 
       - name: Restore existing build cache for faster compilation
         uses: actions/cache@v3
