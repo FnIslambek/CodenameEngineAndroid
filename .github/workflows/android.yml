@@ -25,15 +25,6 @@ jobs:
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21e
-      - name: Setup Lime
-        env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          haxelib run lime setup android
-          echo $ANDROID_SDK_ROOT
-          echo $ANDROID_NDK_HOME
-          echo $JAVA_HOME
-
       - name: Restore existing build cache for faster compilation
         uses: actions/cache@v3
         with:
@@ -48,6 +39,16 @@ jobs:
       - name: Installing/Updating libraries
         run: |
           haxe -cp ./update -D analyzer-optimize -main Update --interp
+       
+      - name: Setup Lime
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          haxelib run lime setup android
+          echo $ANDROID_SDK_ROOT
+          echo $ANDROID_NDK_HOME
+          echo $JAVA_HOME
+
       - name: Building the game
         run: |
           haxelib run lime build android
