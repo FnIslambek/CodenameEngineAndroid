@@ -1,5 +1,5 @@
 
-name: Windows Build
+name: Android Build
 on:
   push:
 jobs:
