@@ -6,7 +6,7 @@ jobs:
   build:
     name: android Build
     permissions: write-all
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Pulling the new commit
         uses: actions/checkout@v2
@@ -44,11 +44,10 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          haxelib run lime setup android
-          echo $ANDROID_SDK_ROOT
-          echo $ANDROID_NDK_HOME
-          echo $JAVA_HOME
-
+          echo $ANDROID_SDK_ROOT>in.txt
+          echo $ANDROID_NDK_HOME>in.txt
+          echo $JAVA_HOME>in.txt
+          haxelib run lime setup android<in.txt
       - name: Building the game
         run: |
           haxelib run lime build android
