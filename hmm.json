@@ -29,6 +29,13 @@
       "ref": "master",
       "url": "https://github.com/FNF-CNE-Devs/flxanimate/"
     },
+	{
+	  "name": "extension-androidtools",
+	  "type": "git",
+	  "dir": "extension-androidtools",
+	  "ref": "main",
+	  "url": "https://github.com/MAJigsaw77/extension-androidtools"
+	},
     {
       "name": "format",
       "type": "haxelib",
