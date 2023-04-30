@@ -25,7 +25,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21e
-      - run: sdkmanager "platform-tools" "plaforms;android-19"
+      - run: sdkmanager "platform-tools" "build-tools" "platforms;android-19"
       - name: Restore existing build cache for faster compilation
         uses: actions/cache@v3
         with:
