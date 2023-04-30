@@ -20,12 +20,12 @@ jobs:
           java-version: '11'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
+      - run: sdkmanager "platform-tools" "platforms;android-19"
       - name: Setup Android NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r21e
-      - run: sdkmanager "platform-tools" "build-tools" "platforms;android-19"
       - name: Restore existing build cache for faster compilation
         uses: actions/cache@v3
         with:
