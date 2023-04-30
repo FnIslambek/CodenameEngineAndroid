@@ -20,7 +20,7 @@ jobs:
           java-version: '11'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
-      - run: sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-19"
+      - run: sdkmanager "build-tools;34.0.0" "platforms;android-19"
       - name: Setup Android NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
