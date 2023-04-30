@@ -44,7 +44,7 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          $ANDROID_SDK_ROOT `r`n$ANDROID_NDK_HOME `r`n$JAVA_HOME | haxelib run lime setup android
+          $ANDROID_SDK_ROOT `r`n $ANDROID_NDK_HOME `r`n $JAVA_HOME | haxelib run lime setup android
 
       - name: Building the game
         run: |
