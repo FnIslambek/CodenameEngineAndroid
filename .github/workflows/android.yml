@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Codename Engine
-          path: export/release/android/bin
+          path: export/release/android/bin/app/outputs/apk/debug/CodenameEngine-debug.apk
       - name: Clearing already existing cache
         if: success() || failure()
         uses: actions/github-script@v6
