@@ -16,12 +16,12 @@ class AndroidInput extends FlxBasic {
 	    }
 		if (FlxG.touches.justStarted()[0] != null) {
             curTouch = FlxG.touches.justStarted()[0];
-            lastTouch = FlxPoint.get(Math.floor((curTouch.getPosition().x - curTouch.justPressedPosition.x) / 200),
-            Math.floor((curTouch.getPosition().y - curTouch.justPressedPosition.y) / 100));
+            lastTouch = FlxPoint.get(Math.floor((curTouch.getScreenPosition().x - curTouch.justPressedPosition.x) / 200),
+            Math.floor((curTouch.getScreenPosition().y - curTouch.justPressedPosition.y) / 100));
         }
         if (curTouch != null && curTouch.pressed) {
-        	touchSwipeY = (curTouch.getPosition().y - curTouch.justPressedPosition.y) / 160;
-        	touchSwipeX = (curTouch.getPosition().x - curTouch.justPressedPosition.x) / 100;
+        	touchSwipeY = (curTouch.getScreenPosition().y - curTouch.justPressedPosition.y) / 160;
+        	touchSwipeX = (curTouch.getScreenPosition().x - curTouch.justPressedPosition.x) / 100;
         	if (lastTouch.y != Math.floor(touchSwipeY)) {
         	    switch (FlxMath.signOf(Math.floor(touchSwipeY) - lastTouch.y)) {
     	            case -1: @:privateAccess(FlxG.keys) FlxG.keys.getKey(83).current = 2;
