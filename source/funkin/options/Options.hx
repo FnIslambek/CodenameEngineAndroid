@@ -17,6 +17,7 @@ class Options
 	/**
 	 * SETTINGS
 	 */
+	public static var widescreen:Bool = false;
 	public static var naughtyness:Bool = true;
 	public static var downscroll:Bool = false;
 	public static var ghostTapping:Bool = true;
@@ -124,6 +125,7 @@ class Options
 	public static function applySettings() {
 		applyKeybinds();
 		FlxG.game.stage.quality = (FlxG.enableAntialiasing = antialiasing) ? LOW : BEST;
+		funkin.backend.system.Main.widescreen = widescreen;
 		FlxG.autoPause = autoPause;
 		FlxG.drawFramerate = FlxG.updateFramerate = framerate;
 	}

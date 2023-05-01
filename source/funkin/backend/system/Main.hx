@@ -38,6 +38,8 @@ class Main extends Sprite
 {
 	public static var instance:Main;
 
+	public static var widescreen:Bool = false;
+
 	public static var modToLoad:String = null;
 	public static var forceGPUOnlyBitmapsOff:Bool = false;
 
@@ -66,7 +68,7 @@ class Main extends Sprite
 		super();
 		#if windows NativeAPI.setDarkMode(true); #end
 
-		addChild(game = new FunkinGame(#if android Math.floor(1280 + (1280 / ((lime.system.System.getDisplay(0).currentMode.width / lime.system.System.getDisplay(0).currentMode.height) + (1280 / 720)))) #else gameWidth #end, gameHeight, MainState, framerate, framerate, skipSplash, startFullscreen));
+		addChild(game = new FunkinGame(gameWidth, gameHeight, MainState, framerate, framerate, skipSplash, startFullscreen));
 
 		addChild(framerateSprite = new funkin.backend.system.framerate.Framerate());
 		framerateSprite.scaleX = framerateSprite.scaleY = stage.window.scale * 2;
@@ -156,7 +158,6 @@ class Main extends Sprite
 		funkin.options.PlayerSettings.init();
 		funkin.savedata.FunkinSave.init();
 		Options.load();
-
 		FlxG.fixedTimestep = false;
         FlxG.plugins.add(new funkin.backend.system.AndroidInput());
 		FlxG.scaleMode = scaleMode = new FunkinRatioScaleMode();

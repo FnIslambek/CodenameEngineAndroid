@@ -16,6 +16,10 @@ class AppearanceOptions extends OptionsScreen {
 			"If unchecked, will disable menu flashing when you select an option in the Main Menu, and other flashs will be slower",
 			"flashingMenu"));
 		add(new Checkbox(
+			"Widescreen Mode",
+			"If checked, will resize your game to the screen size.",
+			"widescreen"));
+		add(new Checkbox(
 			"Low Memory Mode",
 			"If checked, will disable certain background elements in stages to reduce memory usage.",
 			"lowMemoryMode"));

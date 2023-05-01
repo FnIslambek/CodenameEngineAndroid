@@ -8,36 +8,40 @@ class FunkinRatioScaleMode extends RatioScaleMode {
 
 	public override function updateGameSize(Width:Int, Height:Int):Void
 	{
-		var ratio:Float = width / height;
-		var realRatio:Float = Width / Height;
+		if (Main.widescreen) gameSize.set(Width, Height);
+		else {
+			var ratio:Float = width / height;
+			var realRatio:Float = Width / Height;
 
-		var scaleY:Bool = realRatio < ratio;
-		if (fillScreen)
-		{
-			scaleY = !scaleY;
-		}
+			var scaleY:Bool = realRatio < ratio;
+			if (fillScreen)
+			{
+				scaleY = !scaleY;
+			}
 
-		if (scaleY)
-		{
-			gameSize.x = Width;
-			gameSize.y = Math.floor(gameSize.x / ratio);
+			if (scaleY)
+			{
+				gameSize.x = Width;
+				gameSize.y = Math.floor(gameSize.x / ratio);
+			}
+			else
+			{
+				gameSize.y = Height;
+				gameSize.x = Math.floor(gameSize.y * ratio);
+			}
 		}
-		else
-		{
-			gameSize.y = Height;
-			gameSize.x = Math.floor(gameSize.y * ratio);
-		}
+		
 
 		@:privateAccess {
-
+			var realWidth = Main.widescreen ? Math.floor(1280 + (1280 / ((lime.system.System.getDisplay(0).currentMode.width / lime.system.System.getDisplay(0).currentMode.height) + (1280 / 720)))) : width;
 			for(c in FlxG.cameras.list) {
 				if (c.width != FlxG.width && c.height != FlxG.height) {
-					c.width = width;
+					c.width = realWidth;
 					c.height = height;
 				}
 			}
 
-			FlxG.width = width;
+			FlxG.width = realWidth;
 			FlxG.height = height;
 		}
 	}
