@@ -56,6 +56,7 @@ jobs:
           name: Codename Engine
           path: export/release/android/bin/app/outputs/apk/CodenameEngine-debug.apk
       - name: Clearing already existing cache
+        if: success() || failure()
         uses: actions/github-script@v6
         with:
           script: |
@@ -75,6 +76,7 @@ jobs:
               }
             }
       - name: Uploading new cache
+        if: success() || failure()
         uses: actions/cache@v3
         with:
           # caching again since for some reason it doesnt work with the first post cache shit
