@@ -8,8 +8,6 @@ jobs:
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
-      - name: Maximize build disk space
-        uses: easimon/maximize-build-space@v7
       - name: Pulling the new commit
         uses: actions/checkout@v2
       - name: Setting up Haxe
