@@ -62,6 +62,7 @@ class ModsFolder {
 			import openfl.geom.Rectangle;
 			
 			function postCreate() {
+				swipeNavigation = false;
 				var camHitboxes = new FlxCamera();
 				FlxG.cameras.add(camHitboxes, false);
 				camHitboxes.bgColor = 0;

@@ -86,6 +86,8 @@ class MusicBeatState extends FlxState implements IBeatReceiver
 	 */
 	public var controlsP2(get, never):Controls;
 
+	public var swipeNavigation = true;
+
 	/**
 	 * Current injected script attached to the state. To add one, create a file at path "data/states/stateName" (ex: data/states/FreeplayState)
 	 */
@@ -142,7 +144,7 @@ class MusicBeatState extends FlxState implements IBeatReceiver
 		{
 			subState.tryUpdate(elapsed);
 		}
-		FlxG.plugins.get(funkin.backend.system.AndroidInput).updateInput(elapsed);
+		if (swipeNavigation) FlxG.plugins.get(funkin.backend.system.AndroidInput).updateInput(elapsed);
 	}
 	override function create()
 	{

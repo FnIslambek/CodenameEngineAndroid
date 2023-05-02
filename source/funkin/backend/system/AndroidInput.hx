@@ -6,6 +6,8 @@ import flixel.math.FlxPoint;
 import flixel.input.touch.FlxTouch;
 
 class AndroidInput extends FlxBasic {
+	public static var flipX = false;
+	public static var flipY = true;
     public var touchSwipeX:Float;
     public var touchSwipeY:Float;
     var curTouch:FlxTouch;
@@ -23,14 +25,14 @@ class AndroidInput extends FlxBasic {
         	touchSwipeY = (curTouch.getScreenPosition().y - curTouch.justPressedPosition.y) / 160;
         	touchSwipeX = (curTouch.getScreenPosition().x - curTouch.justPressedPosition.x) / 100;
         	if (lastTouch.y != Math.floor(touchSwipeY)) {
-        	    switch (FlxMath.signOf(Math.floor(touchSwipeY) - lastTouch.y)) {
-    	            case -1: @:privateAccess(FlxG.keys) FlxG.keys.getKey(83).current = 2;
-                    case 1: @:privateAccess(FlxG.keys) FlxG.keys.getKey(87).current = 2;
+        	    switch (FlxMath.signOf(Math.floor(touchSwipeY) - lastTouch.y) * FlxMath.signOf(0.5 - (flipY ? 1 : 0))) {
+    	            case 1: @:privateAccess(FlxG.keys) FlxG.keys.getKey(83).current = 2;
+                    case -1: @:privateAccess(FlxG.keys) FlxG.keys.getKey(87).current = 2;
         	    }
                 lastTouch.y = Math.floor(touchSwipeY);
         	}
         	if (lastTouch.x != Math.floor(touchSwipeX)) {
-                switch (FlxMath.signOf(Math.floor(touchSwipeX) - lastTouch.x)) {
+                switch (FlxMath.signOf(Math.floor(touchSwipeX) - lastTouch.x) * FlxMath.signOf(0.5 - (flipY ? 1 : 0))) {
                     case -1: @:privateAccess(FlxG.keys) FlxG.keys.getKey(65).current = 2;
                     case 1: @:privateAccess(FlxG.keys) FlxG.keys.getKey(68).current = 2;
                 }
