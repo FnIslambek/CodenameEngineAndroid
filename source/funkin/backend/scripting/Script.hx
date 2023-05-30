@@ -31,7 +31,7 @@ class Script extends FlxBasic implements IFlxDestroyable {
 
 			// Flixel related stuff
 			"FlxG"			  => flixel.FlxG,
-			"FlxSprite"		 => funkin.backend.FunkinSprite,
+			"FlxSprite"		 => flixel.FlxSprite,
 			"FlxBasic"		  => flixel.FlxBasic,
 			"FlxCamera"		 => flixel.FlxCamera,
 			"state"			 => flixel.FlxG.state,
@@ -80,6 +80,8 @@ class Script extends FlxBasic implements IFlxDestroyable {
 			"FunkinShader"	  => funkin.backend.shaders.FunkinShader,
 			"CustomShader"	  => funkin.backend.shaders.CustomShader,
 			"FunkinText"		=> funkin.backend.FunkinText,
+			"FlxAnimate"		=> funkin.backend.FlxAnimate,
+			"FunkinSprite"		=> funkin.backend.FunkinSprite,
 			"Alphabet"		  => funkin.menus.ui.Alphabet,
 
 			"CoolUtil"		  => funkin.backend.utils.CoolUtil,

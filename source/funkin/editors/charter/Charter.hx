@@ -41,9 +41,12 @@ class Charter extends UIState {
 	public var topMenu:Array<UIContextMenuOption>;
 
 	public var scrollBar:UIScrollBar;
+	public var songPosInfo:UIText;
 
 	public var topMenuSpr:UITopMenu;
 	public var gridBackdrop:CharterBackdrop;
+	public var eventsBackdrop:FlxBackdrop;
+	public var addEventSpr:CharterEventAdd;
 	public var beatSeparator:FlxBackdrop;
 	public var sectionSeparator:FlxBackdrop;
 	public var gridBackdropDummy:CharterBackdropDummy;
@@ -62,6 +65,7 @@ class Charter extends UIState {
 	 */
 	public var strumLines:FlxTypedGroup<CharterStrumline> = new FlxTypedGroup<CharterStrumline>();
 	public var notesGroup:CharterNoteGroup = new CharterNoteGroup();
+	public var eventsGroup:CharterEventGroup = new CharterEventGroup();
 
 	/**
 	 * CAMERAS
@@ -177,7 +181,14 @@ class Charter extends UIState {
 					},
 					null,
 					{
-						label: "Edit metadata information"
+						label: 'Enable scripts during playtesting',
+						onSelect: _chart_enablescripts,
+						icon: Options.charterEnablePlaytestScripts ? 1 : 0
+					},
+					null,
+					{
+						label: "Edit metadata information",
+						onSelect: chart_edit_metadata
 					}
 				]
 			},
@@ -306,6 +317,12 @@ class Charter extends UIState {
 
 		gridBackdrop = new CharterBackdrop();
 
+		eventsBackdrop = new FlxBackdrop(Paths.image('editors/charter/events-grid'), Y, 0, 0);
+		eventsBackdrop.x = -eventsBackdrop.width;
+		eventsBackdrop.alpha = 0.9;
+		eventsBackdrop.cameras = [charterCamera];
+		add(eventsBackdrop);
+
 		add(gridBackdropDummy = new CharterBackdropDummy(gridBackdrop));
 		sectionSeparator = new FlxBackdrop(null, Y, 0, 0);
 		sectionSeparator.x = -20;
@@ -338,7 +355,16 @@ class Charter extends UIState {
 		topMenuSpr.cameras = uiGroup.cameras = [uiCamera];
 
 		scrollBar = new UIScrollBar(FlxG.width - 20, topMenuSpr.bHeight, 1000, 0, 100);
+		scrollBar.cameras = [uiCamera];
+		scrollBar.onChange = function(v) {
+			if (!FlxG.sound.music.playing)
+				Conductor.songPosition = Conductor.getTimeForStep(v);
+		};
 		uiGroup.add(scrollBar);
+
+		songPosInfo = new UIText(FlxG.width - 30 - 400, scrollBar.y + 10, 400, "00:00\nBeat: 0\nStep: 0\nMeasure: 0");
+		songPosInfo.alignment = RIGHT;
+		uiGroup.add(songPosInfo);
 
 		topLimit = new FlxSprite();
 		topLimit.makeGraphic(1, 1, -1);
@@ -352,30 +378,39 @@ class Charter extends UIState {
 
 		strumlineInfoBG.cameras = [charterCamera];
 		strumLines.cameras = [charterCamera];
+		
+		addEventSpr = new CharterEventAdd();
+		addEventSpr.alpha = 0;
+		addEventSpr.cameras = [charterCamera];
 
 
 		// adds grid and notes so that they're ALWAYS behind the UI
 		add(gridBackdrop);
 		add(sectionSeparator);
 		add(beatSeparator);
+		add(addEventSpr);
+		add(eventsGroup);
 		add(notesGroup);
 		add(topLimit);
 		add(conductorFollowerSpr);
 		add(selectionBox);
 		add(strumlineInfoBG);
 		add(strumLines);
-		// add the ui group
-		add(uiGroup);
 		// add the top menu last OUT of the ui group so that it stays on top
 		add(topMenuSpr);
+		// add the ui group
+		add(uiGroup);
 
 		loadSong();
 	}
 
 	var instPath:String;
 	public function loadSong() {
-		if (__reload)
+		if (__reload) {
+			EventsData.reloadEvents();
 			PlayState.loadSong(__song, __diff, false, false);
+		}
+			
 
 		Conductor.setupSong(PlayState.SONG);
 
@@ -383,6 +418,7 @@ class Charter extends UIState {
 		vocals = FlxG.sound.load(Paths.voices(__song, __diff));
 		vocals.group = FlxG.sound.defaultMusicGroup;
 
+		trace("generating notes...");
 		for(strID=>strL in PlayState.SONG.strumLines) {
 			for(note in strL.notes) {
 				var n = new CharterNote();
@@ -393,6 +429,29 @@ class Charter extends UIState {
 
 			strumLines.add(new CharterStrumline(strL));
 		}
+		trace("sorting notes...");
+		notesGroup.sort(function(i, n1, n2) {
+			if (n1.step == n2.step)
+				return FlxSort.byValues(FlxSort.ASCENDING, n1.id, n2.id);
+			return FlxSort.byValues(FlxSort.ASCENDING, n1.step, n2.step);
+		});
+
+		trace("generating events...");
+		var __last:CharterEvent = null;
+		var __lastTime:Float = Math.NaN;
+		for(e in PlayState.SONG.events) {
+			if (e == null) continue;
+			if (__last != null && __lastTime == e.time) {
+				__last.events.push(e);
+			} else {
+				__last = new CharterEvent(Conductor.getStepForTime(e.time), [e]);
+				__lastTime = e.time;
+				eventsGroup.add(__last);
+			}
+		}
+
+		for(e in eventsGroup.members)
+			e.refreshEventIcons();
 
 		refreshBPMSensitive();
 	}
@@ -506,6 +565,8 @@ class Charter extends UIState {
 							deletes.push(s);
 						} else {
 							s.updatePos(newStep, newID, s.susLength, s.type);
+							notesGroup.remove(s);
+							notesGroup.add(s);
 
 							drags.push({
 								note: s,
@@ -535,10 +596,10 @@ class Charter extends UIState {
 							selection = []; // clear selection
 						} else {
 							// place note
-							var id = Std.int(mousePos.x / 40);
+							var id = Math.floor(mousePos.x / 40);
 							if (id >= 0 && id < 4 * gridBackdrop.strumlinesAmount && mousePos.y >= 0) {
 								var note = new CharterNote();
-								note.updatePos(FlxG.keys.pressed.SHIFT ? (mousePos.y / 40) : Std.int(mousePos.y / 40), id, 0, 0);
+								note.updatePos(FlxG.keys.pressed.SHIFT ? (mousePos.y / 40) : Math.floor(mousePos.y / 40), id, 0, 0);
 								notesGroup.add(note);
 								selection = [note];
 								addToUndo(CPlaceNote(note));
@@ -560,6 +621,32 @@ class Charter extends UIState {
 				if (FlxG.mouse.justReleasedRight)
 					openContextMenu(topMenu[1].childs);
 		}
+
+		if (gridActionType == NONE && mousePos.x < 0) {
+			addEventSpr.incorporeal = false;
+			addEventSpr.sprAlpha = lerp(addEventSpr.sprAlpha, 0.75, 0.25);
+			var event = getHoveredEvent(mousePos.y);
+			if (event != null) {
+				addEventSpr.updateEdit(event);
+			} else {
+				addEventSpr.updatePos(mousePos.y);
+			}
+		} else {
+			addEventSpr.incorporeal = true;
+			addEventSpr.sprAlpha = lerp(addEventSpr.sprAlpha, 0, 0.25);
+		}
+	}
+
+	public function getHoveredEvent(y:Float) {
+		var eventHovered:CharterEvent = null;
+		eventsGroup.forEach(function(e) {
+			if (eventHovered != null)
+				return;
+
+			if (e.hovered || (y >= e.y && y < (e.y + e.bHeight)))
+				eventHovered = e;
+		});
+		return eventHovered;
 	}
 
 	public function deleteNote(note:CharterNote, addToUndo:Bool = true):CharterNote {
@@ -617,7 +704,8 @@ class Charter extends UIState {
 		if (true) {
 			__crochet = ((60 / Conductor.bpm) * 1000);
 
-			UIUtil.processShortcuts(topMenu);
+			if(FlxG.keys.justPressed.ANY)
+				UIUtil.processShortcuts(topMenu);
 
 			if (FlxG.keys.pressed.CONTROL) {
 				if (FlxG.mouse.wheel != 0) {
@@ -633,6 +721,11 @@ class Charter extends UIState {
 
 		Conductor.songPosition = FlxMath.bound(Conductor.songPosition, 0, FlxG.sound.music.length);
 
+		songPosInfo.text = '${CoolUtil.timeToStr(Conductor.songPosition)} / ${CoolUtil.timeToStr(FlxG.sound.music.length)}'
+		+ '\nStep: ${curStep}'
+		+ '\nBeat: ${curBeat}'
+		+ '\nMeasure: ${curMeasure}';
+
 		if (FlxG.sound.music.playing) {
 			conductorFollowerSpr.y = curStepFloat * 40;
 		} else {
@@ -643,6 +736,9 @@ class Charter extends UIState {
 			updateDisplaySprites();
 		}
 	}
+
+	public static var startTime:Float = 0;
+	public static var startHere:Bool = false;
 
 	function updateDisplaySprites() {
 		conductorFollowerSpr.scale.set(gridBackdrop.strumlinesAmount * 4 * 40, 4);
@@ -662,6 +758,7 @@ class Charter extends UIState {
 		strumlineInfoBG.scale.set(FlxG.width / charterCamera.zoom, 1);
 		strumlineInfoBG.updateHitbox();
 		strumlineInfoBG.screenCenter(X);
+		strumlineInfoBG.y = -(((FlxG.height - (2 * topMenuSpr.bHeight)) / charterCamera.zoom) - FlxG.height) / 2;
 
 		for(id=>str in strumLines.members) {
 			if (str == null) continue;
@@ -670,8 +767,14 @@ class Charter extends UIState {
 		}
 	}
 
-	var zoom:Float = 0;
-	var __camZoom:Float = 1;
+	var zoom(default, set):Float = 0;
+	var __camZoom(default, set):Float = 1;
+	function set_zoom(val:Float) {
+		return zoom = FlxMath.bound(val, -3.5, 1.75); // makes zooming not lag behind when continuing scrolling
+	}
+	function set___camZoom(val:Float) {
+		return __camZoom = FlxMath.bound(val, 0.1, 3);
+	}
 
 	// TOP MENU OPTIONS
 	#if REGION
@@ -760,8 +863,11 @@ class Charter extends UIState {
 				for(n in changes)
 					n.note.updatePos(n.note.step, n.note.id, n.before, n.note.type);
 			case CNoteDrag(notes, deletes):
-				for(n in notes)
+				for(n in notes) {
 					n.note.updatePos(n.oldStep, n.oldID, n.note.susLength, n.note.type);
+					notesGroup.remove(n.note);
+					notesGroup.add(n.note);
+				}
 				for(d in deletes) {
 					notesGroup.add(d);
 					d.revive();
@@ -778,9 +884,9 @@ class Charter extends UIState {
 			FlxG.sound.music.pause();
 			vocals.pause();
 		} else {
-			vocals.time = FlxG.sound.music.time = Conductor.songPosition;
 			FlxG.sound.music.play();
 			vocals.play();
+			vocals.time = FlxG.sound.music.time = Conductor.songPosition;
 		}
 	}
 
@@ -807,8 +913,11 @@ class Charter extends UIState {
 				for(n in changes)
 					n.note.updatePos(n.note.step, n.note.id, n.after, n.note.type);
 			case CNoteDrag(notes, deletes):
-				for(n in notes)
+				for(n in notes) {
 					n.note.updatePos(n.newStep, n.newID, n.note.susLength, n.note.type);
+					notesGroup.remove(n.note);
+					notesGroup.add(n.note);
+				}
 				deleteNotes(deletes, false);
 				selection = [for(n in notes) n.note];
 		}
@@ -819,11 +928,16 @@ class Charter extends UIState {
 	inline function _chart_playtest(_)
 		playtestChart(0, false);
 	inline function _chart_playtest_here(_)
-		playtestChart(Conductor.songPosition, false);
+		playtestChart(Conductor.songPosition, false, true);
 	inline function _chart_playtest_opponent(_)
 		playtestChart(0, true);
 	inline function _chart_playtest_opponent_here(_)
-		playtestChart(Conductor.songPosition, true);
+		playtestChart(Conductor.songPosition, true, true);
+	function _chart_enablescripts(t) {
+		t.icon = (Options.charterEnablePlaytestScripts = !Options.charterEnablePlaytestScripts) ? 1 : 0;
+	}
+	function chart_edit_metadata(_)
+		FlxG.state.openSubState(new MetaDataScreen(PlayState.SONG.meta));
 
 	function _playback_metronome(t) {
 		t.icon = (Options.charterMetronomeEnabled = !Options.charterMetronomeEnabled) ? 1 : 0;
@@ -898,8 +1012,10 @@ class Charter extends UIState {
 		]));
 	}
 
-	public function playtestChart(time:Float = 0, opponentMode = false) {
+	public function playtestChart(time:Float = 0, opponentMode = false, here = false) {
 		buildChart();
+		startHere = here;
+		startTime = Conductor.songPosition;
 		PlayState.opponentMode = opponentMode;
 		PlayState.chartingMode = true;
 		FlxG.switchState(new PlayState());
@@ -907,9 +1023,15 @@ class Charter extends UIState {
 
 	public function buildChart() {
 		PlayState.SONG.strumLines = [];
+		PlayState.SONG.events = [];
 		for(s in strumLines) {
 			s.strumLine.notes = [];
 			PlayState.SONG.strumLines.push(s.strumLine);
+		}
+		for(e in eventsGroup.members) {
+			for(event in e.events) {
+				PlayState.SONG.events.push(event);
+			}
 		}
 		for(n in notesGroup.members) {
 			var strLineID = Std.int(n.id / 4);

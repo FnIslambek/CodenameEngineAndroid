@@ -58,10 +58,10 @@ class Note extends FlxSprite
 	 * Name of the splash.
 	 */
 	public var splash:String = "default";
-	
+
 	public var strumID(get, never):Int;
 	private function get_strumID() {
-		var id = noteData % 4;
+		var id = noteData % strumLine.members.length;
 		if (id < 0) id = 0;
 		return id;
 	}
@@ -91,7 +91,7 @@ class Note extends FlxSprite
 
 	private static var __customNoteTypeExists:Map<String, Bool> = [];
 
-	public var animSuffix:String = "";
+	public var animSuffix:String = null;
 
 
 	private static function customTypePathExists(path:String) {
@@ -102,7 +102,7 @@ class Note extends FlxSprite
 	public function new(strumLine:StrumLine, noteData:ChartNote, sustain:Bool = false, sustainLength:Float = 0, sustainOffset:Float = 0)
 	{
 		super();
-		
+
 		moves = false;
 
 		this.prevNote = strumLine.notes.members.last();
@@ -114,12 +114,12 @@ class Note extends FlxSprite
 		x += 50;
 		// MAKE SURE ITS DEFINITELY OFF SCREEN?
 		y -= 2000;
-		this.strumTime = noteData.time.getDefault(0) + sustainOffset;
 
+		this.strumTime = noteData.time.getDefault(0) + sustainOffset;
 		this.noteData = noteData.id.getDefault(0);
 
 		var customType = Paths.image('game/notes/${this.noteType}');
-		var event = EventManager.get(NoteCreationEvent).recycle(this, strumID, this.noteType, noteTypeID, PlayState.instance.strumLines.indexOf(strumLine), mustPress,
+		var event = EventManager.get(NoteCreationEvent).recycle(this, strumID, this.noteType, noteTypeID, PlayState.instance.strumLines.members.indexOf(strumLine), mustPress,
 			(this.noteType != null && customTypePathExists(customType)) ? 'game/notes/${this.noteType}' : 'game/notes/default', 0.7, animSuffix);
 
 		if (PlayState.instance != null)
@@ -192,14 +192,22 @@ class Note extends FlxSprite
 	public var strumRelativePos:Bool = true;
 
 	override function drawComplex(camera:FlxCamera) {
-		flipY = (isSustainNote && flipSustain) && ((camera is HudCamera ? cast(camera, HudCamera).downscroll : false) != (__strum != null && __strum.getScrollSpeed(this) < 0));
-		super.drawComplex(camera);
+		var downscrollCam = (camera is HudCamera ? cast(camera, HudCamera).downscroll : false);
+		flipY = (isSustainNote && flipSustain) && (downscrollCam != (__strum != null && __strum.getScrollSpeed(this) < 0));
+		if (downscrollCam) {
+			frameOffset.y += __notePosFrameOffset.y * 2;
+			super.drawComplex(camera);
+			frameOffset.y -= __notePosFrameOffset.y * 2;
+		} else
+			super.drawComplex(camera);
 	}
+
+	var __notePosFrameOffset:FlxPoint = FlxPoint.get();
 
 	override function draw() {
 		@:privateAccess var oldDefaultCameras = FlxCamera._defaultCameras;
 		@:privateAccess if (__strumCameras != null) FlxCamera._defaultCameras = __strumCameras;
-		
+
 		var negativeScroll = isSustainNote && nextSustain != null && lastScrollSpeed < 0;
 		if (negativeScroll)	offset.y *= -1;
 
@@ -208,8 +216,10 @@ class Note extends FlxSprite
 
 			setPosition(__strum.x, __strum.y);
 
-			frameOffset.x -= pos.x / scale.x;
-			frameOffset.y -= pos.y / scale.y;
+			__notePosFrameOffset.set(pos.x / scale.x, pos.y / scale.y);
+
+			frameOffset.x -= __notePosFrameOffset.x;
+			frameOffset.y -= __notePosFrameOffset.y;
 
 			this.frameOffsetAngle = __noteAngle;
 
@@ -217,12 +227,13 @@ class Note extends FlxSprite
 
 			this.frameOffsetAngle = 0;
 
-			frameOffset.x += pos.x / scale.x;
-			frameOffset.y += pos.y / scale.y;
+			frameOffset.x += __notePosFrameOffset.x;
+			frameOffset.y += __notePosFrameOffset.y;
 
 			setPosition(pos.x, pos.y);
 			pos.put();
 		} else {
+			__notePosFrameOffset.set(0, 0);
 			super.draw();
 		}
 
@@ -233,10 +244,6 @@ class Note extends FlxSprite
 	// The * 0.5 is so that it's easier to hit them too late, instead of too early
 	public var earlyPressWindow:Float = 0.5;
 	public var latePressWindow:Float = 1;
-	override function update(elapsed:Float)
-	{
-		super.update(elapsed);
-	}
 
 	public function updateSustain(strum:Strum) {
 		var scrollSpeed = strum.getScrollSpeed(this);
@@ -255,7 +262,11 @@ class Note extends FlxSprite
 
 		if (!wasGoodHit) return;
 		var t = FlxMath.bound((Conductor.songPosition - strumTime) / (height / (0.45 * FlxMath.roundDecimal(scrollSpeed, 2))), 0, 1);
-		var swagRect = new FlxRect(0, t * frameHeight, frameWidth, frameHeight);
+		var swagRect = this.clipRect == null ? new FlxRect() : this.clipRect;
+		swagRect.x = 0;
+		swagRect.y = t * frameHeight;
+		swagRect.width = frameWidth;
+		swagRect.height = frameHeight;
 
 		setClipRect(swagRect);
 	}
@@ -273,5 +284,10 @@ class Note extends FlxSprite
 			frame = frames.frames[animation.frameIndex];
 
 		return rect;
+	}
+
+	public override function destroy() {
+		super.destroy();
+		__notePosFrameOffset.put();
 	}
 }

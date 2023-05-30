@@ -60,7 +60,7 @@ class UIState extends MusicBeatState {
 		updateRectButtonHandler(spr, spr.__rect, buttonHandler);
 	}
 
-	public function updateRectButtonHandler(spr:UISprite, rect:FlxRect, buttonHandler:Void->Void) {
+	public function isOverlapping(spr:UISprite, rect:FlxRect) {
 		for(camera in spr.__lastDrawCameras) {
 			var pos = FlxG.mouse.getScreenPosition(camera, FlxPoint.get());
 			__rect.x = rect.x;
@@ -71,14 +71,20 @@ class UIState extends MusicBeatState {
 			__rect.x -= camera.scroll.x * spr.scrollFactor.x;
 			__rect.y -= camera.scroll.y * spr.scrollFactor.y;
 
-			if (((pos.x > __rect.x) && (pos.x < __rect.x + rect.width)) && ((pos.y > __rect.y) && (pos.y < __rect.y + __rect.height))) {
-				spr.hoveredByChild = true;
-				this.hoveredSprite = spr;
-				this.buttonHandler = buttonHandler;
+			if (((pos.x > __rect.x) && (pos.x < __rect.x + __rect.width)) && ((pos.y > __rect.y) && (pos.y < __rect.y + __rect.height))) {
 				pos.put();
-				return;
+				return true;
 			}
 			pos.put();
+		}
+		return false;
+	}
+
+	public function updateRectButtonHandler(spr:UISprite, rect:FlxRect, buttonHandler:Void->Void) {
+		if(isOverlapping(spr, rect)) {
+			spr.hoveredByChild = true;
+			this.hoveredSprite = spr;
+			this.buttonHandler = buttonHandler;
 		}
 	}
 
@@ -119,7 +125,7 @@ class UIState extends MusicBeatState {
 		state.persistentDraw = true;
 		state.persistentUpdate = true;
 
-		openSubState(curContextMenu = new UIContextMenu(options, callback, x.getDefault(__mousePos.x), y.getDefault(__mousePos.y)));
+		state.openSubState(curContextMenu = new UIContextMenu(options, callback, x.getDefault(__mousePos.x), y.getDefault(__mousePos.y)));
 		return curContextMenu;
 	}
 }

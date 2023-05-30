@@ -16,7 +16,7 @@ import flixel.util.FlxColor;
 import flixel.util.FlxAxes;
 import flixel.graphics.frames.FlxFrame;
 import flixel.graphics.frames.FlxFramesCollection;
-import flash.geom.ColorTransform;
+import openfl.geom.ColorTransform;
 import funkin.backend.chart.Chart;
 import haxe.CallStack;
 
@@ -120,6 +120,16 @@ class CoolUtil
 	 */
 	public static inline function addZeros(str:String, num:Int) {
 		while(str.length < num) str = '0${str}';
+		return str;
+	}
+
+	/**
+	 * Add several zeros at the end of a string, so that `2` becomes `20`, useful for ms.
+	 * @param str String to add zeros
+	 * @param num The length required
+	 */
+	public static inline function addEndZeros(str:String, num:Int) {
+		while(str.length < num) str = '${str}0';
 		return str;
 	}
 
@@ -277,7 +287,7 @@ class CoolUtil
 	 * @param menuSFX Menu SFX to play
 	 * @param volume At which volume it should play
 	 */
-	public static function playMenuSFX(menuSFX:CoolSfx = SCROLL, volume:Float = 1) {
+	public static inline function playMenuSFX(menuSFX:CoolSfx = SCROLL, volume:Float = 1) {
 		FlxG.sound.play(Paths.sound(switch(menuSFX) {
 			case CONFIRM:	'menu/confirm';
 			case CANCEL:	'menu/cancel';
@@ -336,7 +346,7 @@ class CoolUtil
 	 * @param fill Whenever the sprite should fill instead of shrinking (true)
 	 * @param maxScale Maximum scale (0 / none)
 	 */
-	public static function setUnstretchedGraphicSize(sprite:FlxSprite, width:Int, height:Int, fill:Bool = true, maxScale:Float = 0) {
+	public static inline function setUnstretchedGraphicSize(sprite:FlxSprite, width:Int, height:Int, fill:Bool = true, maxScale:Float = 0) {
 		sprite.setGraphicSize(width, height);
 		sprite.updateHitbox();
 		var nScale = (fill ? Math.max : Math.min)(sprite.scale.x, sprite.scale.y);
@@ -392,7 +402,7 @@ class CoolUtil
 	 * @param cam Camera
 	 * @param axes Axes (XY)
 	 */
-	public static function cameraCenter(obj:FlxObject, cam:FlxCamera, axes:FlxAxes = XY) {
+	public static inline function cameraCenter(obj:FlxObject, cam:FlxCamera, axes:FlxAxes = XY) {
 		switch(axes) {
 			case XY:
 				obj.setPosition((cam.width - obj.width) / 2, (cam.height - obj.height) / 2);
@@ -411,7 +421,7 @@ class CoolUtil
 	 * @param width Width
 	 * @param height Height
 	 */
-	public static function setSpriteSize(sprite:FlxSprite, width:Float, height:Float) {
+	public static inline function setSpriteSize(sprite:FlxSprite, width:Float, height:Float) {
 		sprite.scale.set(width / sprite.frameWidth, height / sprite.frameHeight);
 		sprite.updateHitbox();
 	}
@@ -471,6 +481,7 @@ class CoolUtil
 		spr.visible = true;
 		spr.active = true;
 		spr.acceleration.set();
+		spr.velocity.set();
 		spr.drag.set();
 		spr.antialiasing = FlxSprite.defaultAntialiasing;
 		spr.frameOffset.set();
@@ -480,16 +491,33 @@ class CoolUtil
 	/**
 	 * Gets the macro class created by hscript-improved for an abstract / enum
 	 */
-	public static function getMacroAbstractClass(className:String) {
+	public static inline function getMacroAbstractClass(className:String) {
 		return Type.resolveClass('${className}_HSC');
+	}
+
+	/**
+	 * Basically indexOf, but starts from the end.
+	 * @param array Array to scan
+	 * @param element Element
+	 * @return Index, or -1 if unsuccessful.
+	 */
+	public static inline function indexOfFromLast<T>(array:Array<T>, element:T):Int {
+		var i = array.length - 1;
+		while(i >= 0) {
+			if (array[i] == element)
+				break;
+			i--;
+		}
+		return i;
 	}
 
 	/**
 	 * Clears the content of an array
 	 */
-	public static function clear<T>(array:Array<T>):Array<T> {
-		while(array.length > 0)
-			array.shift();
+	public static inline function clear<T>(array:Array<T>):Array<T> {
+		// while(array.length > 0)
+		// 	array.shift();
+		array.resize(0);
 		return array;
 	}
 
@@ -499,7 +527,7 @@ class CoolUtil
 	 * @param ...args Group entries
 	 * @return Array<T>
 	 */
-	public static function pushGroup<T>(array:Array<T>, ...args:T):Array<T> {
+	public static inline function pushGroup<T>(array:Array<T>, ...args:T):Array<T> {
 		for(a in args)
 			array.push(a);
 		return array;
@@ -509,7 +537,7 @@ class CoolUtil
 	 * Opens an URL in the browser.
 	 * @param url
 	 */
-	public static function openURL(url:String) {
+	public static inline function openURL(url:String) {
 		#if linux
 		Sys.command('/usr/bin/xdg-open', [url, "&"]);
 		#else
@@ -518,10 +546,16 @@ class CoolUtil
 	}
 
 	/**
+	 * Converts a timestamp to a readable format such as `01:22` (`mm:ss`)
+	 */
+	public static inline function timeToStr(time:Float)
+		return '${Std.string(Std.int(time / 60000)).addZeros(2)}:${Std.string(Std.int(time / 1000) % 60).addZeros(2)}.${Std.string(Std.int(time % 1000)).addZeros(3)}';
+
+	/**
 	 * Stops a sound, set its time to 0 then play it again.
 	 * @param sound Sound to replay.
 	 */
-	public static function replay(sound:FlxSound) {
+	public static inline function replay(sound:FlxSound) {
 		sound.stop();
 		sound.time = 0;
 		sound.play();
@@ -553,7 +587,7 @@ class CoolUtil
 	 * @param frontEnd SoundFrontEnd to set the music of
 	 * @param music Music
 	 */
-	public static function setMusic(frontEnd:SoundFrontEnd, music:FlxSound) {
+	public static inline function setMusic(frontEnd:SoundFrontEnd, music:FlxSound) {
 		if (frontEnd.music != null)
 			@:privateAccess frontEnd.destroySound(frontEnd.music);
 		frontEnd.list.remove(music);

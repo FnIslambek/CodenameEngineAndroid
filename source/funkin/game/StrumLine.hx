@@ -28,6 +28,12 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	 */
 	public var onNoteUpdate:FlxTypedSignal<NoteUpdateEvent->Void> = new FlxTypedSignal<NoteUpdateEvent->Void>();
 	/**
+	 * Signal that triggers whenever a note is being updated. Similar to onNoteUpdate, except strumline specific.
+	 * To add a listener, do
+	 * `strumLine.onNoteUpdate.add(function(e:NoteUpdateEvent) {});`
+	 */
+	public var onNoteDelete:FlxTypedSignal<SimpleNoteEvent->Void> = new FlxTypedSignal<SimpleNoteEvent->Void>();
+	/**
 	 * Array containing all of the characters "attached" to those strums.
 	 */
 	public var characters:Array<Character>;
@@ -55,6 +61,14 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	 * Group of all of the notes in this strumline. Using `forEach` on this group will only loop through the first notes for performance reasons.
 	 */
 	public var notes:NoteGroup;
+	/**
+	 * Whenever alt animation is enabled on this strumline.
+	 */
+	public var altAnim:Bool = false;
+	/**
+	 * TODO: Write documention about this being a variable that can help when making multi key
+	 */
+	public var strumAnimPrefix = ["left", "down", "up", "right"];
 
 	private function get_ghostTapping() {
 		if (this.ghostTapping != null) return this.ghostTapping;
@@ -64,7 +78,7 @@ class StrumLine extends FlxTypedGroup<Strum> {
 
 	private inline function set_ghostTapping(b:Bool):Bool
 		return this.ghostTapping = b;
-	
+
 	private var strumOffset:Float = 0.25;
 
 	public function new(characters:Array<Character>, strumOffset:Float = 0.25, cpu:Bool = false, opponentSide:Bool = true, ?controls:Controls) {
@@ -77,10 +91,13 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		this.notes = new NoteGroup();
 	}
 
-	public function generate(strumLine:ChartStrumLine) {
+	public function generate(strumLine:ChartStrumLine, ?startTime:Float) {
 		if (strumLine.notes != null) for(note in strumLine.notes) {
+			if (startTime != null && startTime > note.time)
+				continue;
+
 			notes.add(new Note(this, note, false));
-			
+
 			if (note.sLen > Conductor.stepCrochet * 0.75) {
 				var len:Float = note.sLen;
 				var curLen:Float = 0;
@@ -105,20 +122,16 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		notes.draw();
 	}
 
-	public function updateNotes() {
+	public inline function updateNotes() {
 		notes.forEach(updateNote);
 	}
-	
+
 	var __updateNote_strum:Strum;
 	public function updateNote(daNote:Note) {
-		
-		for(e in members) {
-			if (e.ID == daNote.noteData % 4) {
-				__updateNote_strum = e;
-				break; //ing bad
-			}
-		}
-		PlayState.instance.scripts.event("onNoteUpdate", PlayState.instance.__updateNote_event.recycle(daNote, FlxG.elapsed, __updateNote_strum));
+		__updateNote_strum = members[daNote.noteData];
+		if (__updateNote_strum == null) return;
+
+		PlayState.instance.__updateNote_event.recycle(daNote, FlxG.elapsed, __updateNote_strum);
 		onNoteUpdate.dispatch(PlayState.instance.__updateNote_event);
 		if (PlayState.instance.__updateNote_event.cancelled) return;
 
@@ -130,7 +143,7 @@ class StrumLine extends FlxTypedGroup<Strum> {
 				daNote.tooLate = true;
 		}
 
-		if (PlayState.instance.__updateNote_event.__autoCPUHit && cpu && !daNote.wasGoodHit && daNote.strumTime < Conductor.songPosition) PlayState.instance.goodNoteHit(this, daNote);
+		if (cpu && PlayState.instance.__updateNote_event.__autoCPUHit && !daNote.wasGoodHit && daNote.strumTime < Conductor.songPosition) PlayState.instance.goodNoteHit(this, daNote);
 
 		if (daNote.wasGoodHit && daNote.isSustainNote && daNote.strumTime + (daNote.sustainLength) < Conductor.songPosition) {
 			deleteNote(daNote);
@@ -146,68 +159,132 @@ class StrumLine extends FlxTypedGroup<Strum> {
 		if (PlayState.instance.__updateNote_event.strum == null) return;
 
 		if (PlayState.instance.__updateNote_event.__reposNote) PlayState.instance.__updateNote_event.strum.updateNotePosition(daNote);
-		PlayState.instance.__updateNote_event.strum.updateSustain(daNote);
+		if (daNote.isSustainNote)
+			daNote.updateSustain(PlayState.instance.__updateNote_event.strum);
+	}
 
-		PlayState.instance.scripts.event("onNotePostUpdate", PlayState.instance.__updateNote_event);
+	var __funcsToExec:Array<Note->Void> = [];
+	var __pressed:Array<Bool> = [];
+	var __justPressed:Array<Bool> = [];
+	var __justReleased:Array<Bool> = [];
+	var __notePerStrum:Array<Note> = [];
+
+	function __inputProcessPressed(note:Note) {
+		if (__pressed[note.strumID] && note.isSustainNote && note.canBeHit && !note.wasGoodHit) {
+			PlayState.instance.goodNoteHit(this, note);
+		}
+	}
+	function __inputProcessJustPressed(note:Note) {
+		if (__justPressed[note.strumID] && !note.isSustainNote && !note.wasGoodHit && note.canBeHit) {
+			if (__notePerStrum[note.strumID] == null) 											__notePerStrum[note.strumID] = note;
+			else if (Math.abs(__notePerStrum[note.strumID].strumTime - note.strumTime) <= 2)  	deleteNote(note);
+			else if (note.strumTime < __notePerStrum[note.strumID].strumTime)					__notePerStrum[note.strumID] = note;
+		}
+	}
+	public function updateInput(id:Int = 0) {
+		updateNotes();
+
+		if (cpu) return;
+
+		__funcsToExec.clear();
+		__pressed.clear();
+		__justPressed.clear();
+		__justReleased.clear();
+
+		for(s in members) {
+			__pressed.push(s.__getPressed(this));
+			__justPressed.push(s.__getJustPressed(this));
+			__justReleased.push(s.__getJustReleased(this));
+		}
+
+		var event = PlayState.instance.scripts.event("onInputUpdate", EventManager.get(InputSystemEvent).recycle(__pressed, __justPressed, __justReleased, this, id));
+		if (event.cancelled) return;
+
+		__pressed = CoolUtil.getDefault(event.pressed, []);
+		__justPressed = CoolUtil.getDefault(event.justPressed, []);
+		__justReleased = CoolUtil.getDefault(event.justReleased, []);
+
+		__notePerStrum = [for(_ in 0...members.length) null];
+
+
+		if (__pressed.contains(true)) {
+			for(c in characters)
+				if (c.lastAnimContext != DANCE)
+					c.__lockAnimThisFrame = true;
+
+			__funcsToExec.push(__inputProcessPressed);
+		}
+		if (__justPressed.contains(true))
+			__funcsToExec.push(__inputProcessJustPressed);
+
+		if (__funcsToExec.length > 0) {
+			notes.forEachAlive(function(note:Note) {
+				for(e in __funcsToExec) if (e != null) e(note);
+			});
+		}
+
+		if (!ghostTapping) for(k=>pr in __justPressed) if (pr && __notePerStrum[k] == null) {
+			// FUCK YOU
+			PlayState.instance.noteMiss(this, null, k, ID);
+		}
+		for(e in __notePerStrum) if (e != null) PlayState.instance.goodNoteHit(this, e);
+
+		forEach(function(str:Strum) {
+			str.updatePlayerInput(str.__getPressed(this), str.__getJustPressed(this), str.__getJustReleased(this));
+		});
+		PlayState.instance.scripts.call("onPostInputUpdate");
 	}
 
 	public inline function addHealth(health:Float)
 		PlayState.instance.health += health * (opponentSide ? -1 : 1);
 
-	public function generateStrums(amount:Int = 4) {
-		for (i in 0...4)
-		{
-			var babyArrow:Strum = new Strum((FlxG.width * strumOffset) + (Note.swagWidth * (i - 2)), PlayState.instance.strumLine.y);
-			babyArrow.ID = i;
+	public inline function generateStrums(amount:Int = 4) {
+		for (i in 0...amount)
+			add(createStrum(i));
+	}
 
-			var event = PlayState.instance.scripts.event("onStrumCreation", EventManager.get(StrumCreationEvent).recycle(babyArrow, PlayState.instance.strumLines.indexOf(this), i));
+	/**
+	 * Creates a strum and returns the created strum (needs to be added manually).
+	 * @param i Index of the strum
+	 * @param animPrefix (Optional) Animation prefix (`left` = `arrowLEFT`, `left press`, `left confirm`).
+	 */
+	public function createStrum(i:Int, ?animPrefix:String) {
+		if (animPrefix == null)
+			animPrefix = strumAnimPrefix[i % strumAnimPrefix.length];
+		var babyArrow:Strum = new Strum((FlxG.width * strumOffset) + (Note.swagWidth * (i - 2)), PlayState.instance.strumLine.y);
+		babyArrow.ID = i;
 
-			if (!event.cancelled) {
-				babyArrow.frames = Paths.getFrames(event.sprite);
-				babyArrow.animation.addByPrefix('green', 'arrowUP');
-				babyArrow.animation.addByPrefix('blue', 'arrowDOWN');
-				babyArrow.animation.addByPrefix('purple', 'arrowLEFT');
-				babyArrow.animation.addByPrefix('red', 'arrowRIGHT');
+		var event = PlayState.instance.scripts.event("onStrumCreation", EventManager.get(StrumCreationEvent).recycle(babyArrow, PlayState.instance.strumLines.members.indexOf(this), i, animPrefix));
 
-				babyArrow.antialiasing = true;
-				babyArrow.setGraphicSize(Std.int(babyArrow.width * 0.7));
+		if (!event.cancelled) {
+			babyArrow.frames = Paths.getFrames(event.sprite);
+			babyArrow.animation.addByPrefix('green', 'arrowUP');
+			babyArrow.animation.addByPrefix('blue', 'arrowDOWN');
+			babyArrow.animation.addByPrefix('purple', 'arrowLEFT');
+			babyArrow.animation.addByPrefix('red', 'arrowRIGHT');
 
-				switch (babyArrow.ID % 4)
-				{
-					case 0:
-						babyArrow.animation.addByPrefix('static', 'arrowLEFT');
-						babyArrow.animation.addByPrefix('pressed', 'left press', 24, false);
-						babyArrow.animation.addByPrefix('confirm', 'left confirm', 24, false);
-					case 1:
-						babyArrow.animation.addByPrefix('static', 'arrowDOWN');
-						babyArrow.animation.addByPrefix('pressed', 'down press', 24, false);
-						babyArrow.animation.addByPrefix('confirm', 'down confirm', 24, false);
-					case 2:
-						babyArrow.animation.addByPrefix('static', 'arrowUP');
-						babyArrow.animation.addByPrefix('pressed', 'up press', 24, false);
-						babyArrow.animation.addByPrefix('confirm', 'up confirm', 24, false);
-					case 3:
-						babyArrow.animation.addByPrefix('static', 'arrowRIGHT');
-						babyArrow.animation.addByPrefix('pressed', 'right press', 24, false);
-						babyArrow.animation.addByPrefix('confirm', 'right confirm', 24, false);
-				}
-			}
+			babyArrow.antialiasing = true;
+			babyArrow.setGraphicSize(Std.int(babyArrow.width * 0.7));
 
-			babyArrow.cpu = cpu;
-			babyArrow.updateHitbox();
-			babyArrow.scrollFactor.set();
-
-			if (event.__doAnimation)
-			{
-				babyArrow.y -= 10;
-				babyArrow.alpha = 0;
-				FlxTween.tween(babyArrow, {y: babyArrow.y + 10, alpha: 1}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
-			}
-
-			add(babyArrow);
-
-			babyArrow.playAnim('static');
+			babyArrow.animation.addByPrefix('static', 'arrow${event.animPrefix.toUpperCase()}');
+			babyArrow.animation.addByPrefix('pressed', '${event.animPrefix} press', 24, false);
+			babyArrow.animation.addByPrefix('confirm', '${event.animPrefix} confirm', 24, false);
 		}
+
+		babyArrow.cpu = cpu;
+		babyArrow.updateHitbox();
+		babyArrow.scrollFactor.set();
+
+		if (event.__doAnimation)
+		{
+			babyArrow.y -= 10;
+			babyArrow.alpha = 0;
+			FlxTween.tween(babyArrow, {y: babyArrow.y + 10, alpha: 1}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
+		}
+		babyArrow.playAnim('static');
+
+		insert(i, babyArrow);
+		return babyArrow;
 	}
 
 	/**
@@ -216,7 +293,8 @@ class StrumLine extends FlxTypedGroup<Strum> {
 	 */
 	public function deleteNote(note:Note) {
 		if (note == null) return;
-		var event:SimpleNoteEvent = PlayState.instance.scripts.event("onNoteDelete", EventManager.get(SimpleNoteEvent).recycle(note));
+		var event:SimpleNoteEvent = EventManager.get(SimpleNoteEvent).recycle(note);
+		onNoteDelete.dispatch(event);
 		if (!event.cancelled) {
 			note.kill();
 			notes.remove(note, true);

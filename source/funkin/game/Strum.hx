@@ -8,9 +8,41 @@ class Strum extends FlxSprite {
 	public var lastHit:Float = -5000;
 
 	public var scrollSpeed:Null<Float> = null; // custom scroll speed per strum
-	public var noteAngle:Null<Float> = null; // custom scroll speed per strum
-	
+	public var noteAngle:Null<Float> = null;
+
 	public var lastDrawCameras(default, null):Array<FlxCamera> = [];
+
+	public var getPressed:StrumLine->Bool = null;
+	public var getJustPressed:StrumLine->Bool = null;
+	public var getJustReleased:StrumLine->Bool = null;
+
+	public inline function __getPressed(strumLine:StrumLine):Bool {
+		return getPressed != null ? getPressed(strumLine) : switch(ID) {
+			case 0: strumLine.controls.NOTE_LEFT;
+			case 1: strumLine.controls.NOTE_DOWN;
+			case 2: strumLine.controls.NOTE_UP;
+			case 3: strumLine.controls.NOTE_RIGHT;
+			default: false;
+		}
+	}
+	public inline function __getJustPressed(strumLine:StrumLine) {
+		return getJustPressed != null ? getJustPressed(strumLine) : switch(ID) {
+			case 0: strumLine.controls.NOTE_LEFT_P;
+			case 1: strumLine.controls.NOTE_DOWN_P;
+			case 2: strumLine.controls.NOTE_UP_P;
+			case 3: strumLine.controls.NOTE_RIGHT_P;
+			default: false;
+		}
+	}
+	public inline function __getJustReleased(strumLine:StrumLine) {
+		return getJustReleased != null ? getJustReleased(strumLine) : switch(ID) {
+			case 0: strumLine.controls.NOTE_LEFT_R;
+			case 1: strumLine.controls.NOTE_DOWN_R;
+			case 2: strumLine.controls.NOTE_UP_R;
+			case 3: strumLine.controls.NOTE_RIGHT_R;
+			default: false;
+		}
+	}
 
 	public inline function getScrollSpeed(?note:Note):Float {
 		if (note != null && note.scrollSpeed != null) return note.scrollSpeed;
@@ -18,7 +50,7 @@ class Strum extends FlxSprite {
 		if (PlayState.instance != null) return PlayState.instance.scrollSpeed;
 		return 1;
 	}
-	
+
 	public inline function getNotesAngle(?note:Note):Float {
 		if (note != null && note.noteAngle != null) return note.noteAngle;
 		if (noteAngle != null) return noteAngle;
@@ -44,22 +76,26 @@ class Strum extends FlxSprite {
 
 	public function updateNotePosition(daNote:Note) {
 		if (!daNote.exists) return;
-	
+
 		daNote.__strumCameras = lastDrawCameras;
 		daNote.__strum = this;
 		daNote.scrollFactor.set(scrollFactor.x, scrollFactor.y);
 		daNote.__noteAngle = getNotesAngle(daNote);
 		daNote.angle = daNote.isSustainNote ? daNote.__noteAngle : angle;
 
+		updateNotePos(daNote);
+	}
+
+	private inline function updateNotePos(daNote:Note) {
 		if (daNote.strumRelativePos) {
-			daNote.setPosition((Note.swagWidth - daNote.width) / 2, (daNote.strumTime - Conductor.songPosition) * (0.45 * FlxMath.roundDecimal(getScrollSpeed(daNote), 2)));
+			daNote.setPosition((this.width - daNote.width) / 2, (daNote.strumTime - Conductor.songPosition) * (0.45 * FlxMath.roundDecimal(getScrollSpeed(daNote), 2)));
 			if (daNote.isSustainNote) daNote.y += N_WIDTHDIV2;
 		} else {
 			var offset = FlxPoint.get(0, (Conductor.songPosition - daNote.strumTime) * (0.45 * FlxMath.roundDecimal(getScrollSpeed(daNote), 2)));
 			var realOffset = FlxPoint.get(0, 0);
 
 			if (daNote.isSustainNote) offset.y -= N_WIDTHDIV2;
-			
+
 			if (Std.int(daNote.__noteAngle % 360) != 0) {
 				var noteAngleCos = FlxMath.fastCos(daNote.__noteAngle / PIX180);
 				var noteAngleSin = FlxMath.fastSin(daNote.__noteAngle / PIX180);
@@ -77,15 +113,15 @@ class Strum extends FlxSprite {
 				realOffset.y = offset.y;
 			}
 			realOffset.y *= -1;
-	
+
 			daNote.setPosition(x + realOffset.x, y + realOffset.y);
-			
+
 			offset.put();
 			realOffset.put();
 		}
 	}
 
-	public function updateSustain(daNote:Note) {
+	public inline function updateSustain(daNote:Note) {
 		if (!daNote.isSustainNote) return;
 		daNote.updateSustain(this);
 	}
@@ -104,17 +140,14 @@ class Strum extends FlxSprite {
 			case null:
 				playAnim("static");
 		}
-		centerOffsets();
-		centerOrigin();
 	}
 
-	public function press(time:Float) {
+	public inline function press(time:Float) {
 		lastHit = time;
 		playAnim("confirm");
 	}
 
 	public function playAnim(anim:String, force:Bool = true) {
-		var oldAnim = animation.curAnim;
 		animation.play(anim, force);
 		centerOffsets();
 		centerOrigin();
